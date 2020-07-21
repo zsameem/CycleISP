@@ -6,8 +6,9 @@
 """
 
 import numpy as np
-import os
+import os 
 import argparse
+import pdb
 from tqdm import tqdm
 
 import torch.nn as nn
@@ -17,7 +18,8 @@ import torch.nn.functional as F
 
 import scipy.io as sio
 from networks.cycleisp import Rgb2Raw, Raw2Rgb, CCM
-from dataloaders.data_rgb import get_rgb_data
+# from dataloaders.data_rgb import get_rgb_data
+from dataloaders.dataset_rgb import SRDataset
 from utils.noise_sampling import random_noise_levels_dnd, random_noise_levels_sidd, add_noise
 import utils
 import lycon
@@ -31,6 +33,9 @@ parser.add_argument('--weights_rgb2raw', default='./pretrained_models/isp/rgb2ra
 parser.add_argument('--weights_raw2rgb', default='./pretrained_models/isp/raw2rgb_joint.pth', type=str, help='weights raw2rgb branch')
 parser.add_argument('--weights_ccm', default='./pretrained_models/isp/ccm_joint.pth', type=str, help='weights ccm branch')
 parser.add_argument('--gpus', default='0', type=str, help='CUDA_VISIBLE_DEVICES')
+parser.add_argument('--scale_factor', default=2, type=int, help='Downscaling factor to go from blurred hr to blurred lr')
+parser.add_argument('--filter_dir', default='/home/samim/Desktop/ms/CycleISP/datasets/extracted_psfs2_9x9',
+    type=str, help='Directory containing blur filters')
 parser.add_argument('--save_images', action='store_true', help='Save synthesized images in result directory')
 
 args = parser.parse_args()
@@ -41,9 +46,9 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpus
 
 utils.mkdir(args.result_dir+'clean')
 utils.mkdir(args.result_dir+'noisy')
-
-test_dataset = get_rgb_data(args.input_dir)
-test_loader = DataLoader(dataset=test_dataset, batch_size=4, shuffle=False, num_workers=2, drop_last=False)
+# pdb.set_trace()
+test_dataset = SRDataset(args.input_dir, args.filter_dir, args.scale_factor)
+test_loader = DataLoader(dataset=test_dataset, batch_size=1, shuffle=False, num_workers=2, drop_last=False)
 
 
 
@@ -71,10 +76,12 @@ model_raw2rgb.eval()
 
 with torch.no_grad():
     for ii, data in enumerate(tqdm(test_loader), 0):
-        rgb_gt    = data[0].cuda()
-        filenames = data[1]
-        padh = data[2]
-        padw = data[3]
+        rgb_gt    = data[0].cuda() # clean lr
+        rgb_hr    = data[1].cuda() # clean hr
+        filenames = data[2]
+        # padh = data[2]
+        # padw = data[3]
+        # pdb.set_trace()
         ## Convert clean rgb image to clean raw image
         raw_gt = model_rgb2raw(rgb_gt)       ## raw_gt is in RGGB format
         raw_gt = torch.clamp(raw_gt,0,1)
@@ -95,11 +102,10 @@ with torch.no_grad():
 
             rgb_noisy = rgb_noisy.permute(0, 2, 3, 1).squeeze().cpu().detach().numpy()
 
-            rgb_clean = rgb_gt[j].permute(1,2,0).cpu().detach().numpy()
+            rgb_clean = rgb_hr[j].permute(1,2,0).cpu().detach().numpy()
             ## Unpadding
-            rgb_clean = rgb_clean[padh[j]:-padh[j],padw[j]:-padw[j],:]   
-            rgb_noisy = rgb_noisy[padh[j]:-padh[j],padw[j]:-padw[j],:]   
-            # import pdb;pdb.set_trace()
+            # rgb_clean = rgb_clean[padh[j]:-padh[j],padw[j]:-padw[j],:]   
+            # rgb_noisy = rgb_noisy[padh[j]:-padh[j],padw[j]:-padw[j],:] 
 
             lycon.save(args.result_dir+'clean/'+filename[:-4]+'.png',(rgb_clean*255).astype(np.uint8))
             lycon.save(args.result_dir+'noisy/'+filename[:-4]+'.png',(rgb_noisy*255).astype(np.uint8))

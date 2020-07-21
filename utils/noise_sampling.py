@@ -18,12 +18,12 @@ import numpy as np
 def random_noise_levels_dnd():
   """Generates random noise levels from a log-log linear distribution."""
   log_min_shot_noise = torch.log10(torch.Tensor([0.0001]))
-  log_max_shot_noise = torch.log10(torch.Tensor([0.012]))
+  log_max_shot_noise = torch.log10(torch.Tensor([0.006]))
   distribution = dist.uniform.Uniform(log_min_shot_noise, log_max_shot_noise)
 
   log_shot_noise = distribution.sample()
   shot_noise = torch.pow(10,log_shot_noise)
-  distribution = dist.normal.Normal(torch.Tensor([0.0]), torch.Tensor([0.26]))
+  distribution = dist.normal.Normal(torch.Tensor([0.0]), torch.Tensor([0.12]))
   read_noise = distribution.sample()
   line = lambda x: 2.18 * x + 1.20
   log_read_noise = line(log_shot_noise) + read_noise
