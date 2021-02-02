@@ -103,6 +103,8 @@ with torch.no_grad():
             rgb_noisy = rgb_noisy.permute(0, 2, 3, 1).squeeze().cpu().detach().numpy()
 
             rgb_clean = rgb_hr[j].permute(1,2,0).cpu().detach().numpy()
+            rgb_clean = np.ascontiguousarray(rgb_clean)
+            rgb_noisy = np.ascontiguousarray(rgb_noisy)
             ## Unpadding
             # rgb_clean = rgb_clean[padh[j]:-padh[j],padw[j]:-padw[j],:]   
             # rgb_noisy = rgb_noisy[padh[j]:-padh[j],padw[j]:-padw[j],:] 

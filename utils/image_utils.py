@@ -1,9 +1,9 @@
 import torch
 import numpy as np
-from skimage.measure.simple_metrics import compare_psnr
+# from skimage.measure.simple_metrics import compare_psnr
 import pickle
 import lycon
-from skimage.measure import compare_ssim
+# from skimage.measure import compare_ssim
 
 
 def is_numpy_file(filename):
